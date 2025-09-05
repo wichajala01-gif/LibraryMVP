@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>ห้องสมุดโรงเรียน — ระบบยืม-คืน & ผู้ช่วยบรรณารักษ์</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50:'#eef8ff',100:'#d9f1ff',200:'#b8e3ff',300:'#8fd0ff',400:'#66b8ff',
+              500:'#4796ff',600:'#3a73e6',700:'#2f58bf',800:'#263f8f',900:'#1e2c66'
+            },
+            mint:'#22c55e',
+            grape:'#8b5cf6',
+          }
+        }
+      }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://unpkg.com/html5-qrcode" defer></script>
+  <style>html,body{background:#f7fafc;}</style>
+</head>
+<body class="min-h-screen">
+  <header class="bg-gradient-to-r from-primary-500 via-grape to-mint text-white py-6 shadow">
+    <div class="max-w-5xl mx-auto px-4">
+      <h1 class="text-2xl md:text-3xl font-bold drop-shadow">ระบบห้องสมุดโรงเรียน</h1>
+      <p class="opacity-90">ยืม-คืนหนังสือ • เพิ่มหนังสือ • เข้า-ออก • ผู้ช่วยบรรณารักษ์</p>
+    </div>
+  </header>
+  <main class="max-w-5xl mx-auto p-4">
+
+    <!-- Tabs -->
+    <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+      <button data-tab="borrow" class="tab-btn bg-white rounded-2xl shadow p-3 border-2 border-primary-200 hover:border-primary-500">ยืม–คืน</button>
+      <button data-tab="addbook" class="tab-btn bg-white rounded-2xl shadow p-3 border-2 border-mint/20 hover:border-mint">เพิ่มหนังสือ</button>
+      <button data-tab="entry" class="tab-btn bg-white rounded-2xl shadow p-3 border-2 border-grape/20 hover:border-grape">เข้า–ออก ห้องสมุด</button>
+      <button data-tab="assistant" class="tab-btn bg-white rounded-2xl shadow p-3 border-2 border-primary-200 hover:border-primary-500">ผู้ช่วยบรรณารักษ์</button>
+    </div>
+
+    <!-- Borrow/Return -->
+    <section id="tab-borrow" class="tab-pane mt-6 bg-white rounded-2xl shadow p-4 border">
+      <h2 class="text-xl font-bold mb-2">ฟังก์ชันยืม–คืนหนังสือ</h2>
+      <p class="text-sm text-gray-600 mb-4">สแกนคิวอาร์โค้ด (กล้องหลัง) เพื่อกรอกข้อมูลหนังสืออัตโนมัติ แล้วเลือกประเภทการทำรายการ</p>
+
+      <div class="mb-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="btn-start-scan" class="px-4 py-2 rounded-xl bg-primary-600 text-white shadow hover:bg-primary-700">เริ่มสแกนคิวอาร์โค้ด</button>
+          <button id="btn-stop-scan" class="px-4 py-2 rounded-xl bg-gray-100 border hover:bg-gray-200" disabled>หยุดสแกน</button>
+          <button id="btn-flip" class="px-4 py-2 rounded-xl bg-gray-100 border hover:bg-gray-200 hidden">สลับกล้อง</button>
+        </div>
+        <div id="qr-reader" class="mt-3 hidden rounded-xl overflow-hidden border"></div>
+        <p class="text-xs text-gray-500 mt-2">* ต้องเปิดเว็บผ่าน HTTPS และอนุญาตการใช้กล้อง • iOS (Safari) ต้องมีการแตะปุ่มก่อนเพื่อเริ่มกล้อง</p>
+      </div>
+
+      <form id="form-borrow" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div><label class="font-medium">เลขประจำตัวนักเรียน (0001–9999)</label>
+          <input id="studentId" type="text" inputmode="numeric" pattern="\d{4}" placeholder="เช่น 0123" class="w-full mt-1 p-2 border rounded-xl" required /></div>
+        <div><label class="font-medium">ชื่อนักเรียน</label>
+          <input id="studentName" type="text" class="w-full mt-1 p-2 border rounded-xl" required /></div>
+        <div><label class="font-medium">ชื่อหนังสือ</label>
+          <input id="bookTitle" type="text" class="w-full mt-1 p-2 border rounded-xl" required /></div>
+        <div><label class="font-medium">ผู้แต่ง</label>
+          <input id="author" type="text" class="w-full mt-1 p-2 border rounded-xl" required /></div>
+        <div><label class="font-medium">หมวดหมู่ดิวอี้</label>
+          <select id="dewey" class="w-full mt-1 p-2 border rounded-xl" required></select></div>
+        <div><label class="font-medium">สำนักพิมพ์</label>
+          <input id="publisher" type="text" class="w-full mt-1 p-2 border rounded-xl" required /></div>
+        <div><label class="font-medium">ปีที่พิมพ์</label>
+          <input id="year" type="text" inputmode="numeric" pattern="\d{4}" class="w-full mt-1 p-2 border rounded-xl" required /></div>
+        <div><label class="font-medium">รหัสหนังสือ</label>
+          <div class="flex gap-2">
+            <input id="bookCode" type="text" class="w-full mt-1 p-2 border rounded-xl" placeholder="เช่น BK-00001" required />
+            <button id="btn-fetch-book" type="button" class="mt-1 px-3 rounded-xl border">ดึงข้อมูล</button>
+          </div></div>
+
+        <div class="md:col-span-2">
+          <label class="font-medium">ประเภทการทำรายการ</label>
+          <div class="mt-1 flex items-center gap-4">
+            <label class="flex items-center gap-2"><input type="radio" name="type" value="ยืม" required> ยืม</label>
+            <label class="flex items-center gap-2"><input type="radio" name="type" value="คืน" required> คืน</label>
+          </div></div>
+        <div class="md:col-span-2 flex gap-2">
+          <button class="px-4 py-2 rounded-xl bg-mint text-white shadow hover:opacity-90" type="submit">บันทึกยืม–คืน</button>
+          <button class="px-4 py-2 rounded-xl bg-gray-100 border" type="reset">ล้างฟอร์ม</button>
+        </div>
+      </form>
+
+      <!-- Stats -->
+      <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3" id="stats">
+        <div class="p-3 rounded-2xl bg-primary-50 border"><div class="text-xs text-gray-600">ยืมวันนี้</div><div id="stat-borrow-today" class="text-2xl font-bold">–</div></div>
+        <div class="p-3 rounded-2xl bg-primary-50 border"><div class="text-xs text-gray-600">คืนวันนี้</div><div id="stat-return-today" class="text-2xl font-bold">–</div></div>
+        <div class="p-3 rounded-2xl bg-primary-50 border"><div class="text-xs text-gray-600">ยืมทั้งหมด</div><div id="stat-borrow-all" class="text-2xl font-bold">–</div></div>
+        <div class="p-3 rounded-2xl bg-primary-50 border"><div class="text-xs text-gray-600">คืนทั้งหมด</div><div id="stat-return-all" class="text-2xl font-bold">–</div></div>
+      </div>
+    </section>
+
+    <!-- Add Book -->
+    <section id="tab-addbook" class="tab-pane mt-6 bg-white rounded-2xl shadow p-4 border hidden">
+      <h2 class="text-xl font-bold mb-2">เพิ่มหนังสือเข้าสู่คลัง</h2>
+      <form id="form-addbook" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div><label class="font-medium">วันที่เพิ่ม</label>
+          <input id="add-date" type="date" class="w-full mt-1 p-2 border rounded-xl" /></div>
+        <div><label class="font-medium">ชื่อหนังสือ</label>
+          <input id="add-title" type="text" class="w-full mt-1 p-2 border rounded-xl" required /></div>
+        <div><label class="font-medium">ผู้แต่ง</label>
+          <input id="add-author" type="text" class="w-full mt-1 p-2 border rounded-xl" required /></div>
+        <div><label class="font-medium">หมวดหมู่ดิวอี้</label>
+          <select id="add-dewey" class="w-full mt-1 p-2 border rounded-xl" required></select></div>
+        <div><label class="font-medium">สำนักพิมพ์</label>
+          <input id="add-publisher" type="text" class="w-full mt-1 p-2 border rounded-xl" required /></div>
+        <div><label class="font-medium">ปีที่พิมพ์</label>
+          <input id="add-year" type="text" inputmode="numeric" pattern="\d{4}" class="w-full mt-1 p-2 border rounded-xl" required /></div>
+        <div class="md:col-span-2 flex gap-2">
+          <button class="px-4 py-2 rounded-xl bg-mint text-white shadow" type="submit">บันทึกเพิ่มหนังสือ</button>
+          <button class="px-4 py-2 rounded-xl bg-gray-100 border" type="reset">ล้างฟอร์ม</button>
+        </div>
+      </form>
+      <p class="text-sm text-gray-600 mt-3">* เมื่อเพิ่มหนังสือแล้ว ให้สร้างคิวอาร์โค้ดสำหรับ <b>รหัสหนังสือ (คอลัมน์ G)</b> แต่ละเล่ม ตามวิธีด้านล่างสุดของหน้า</p>
+    </section>
+
+    <!-- Entry/Exit -->
+    <section id="tab-entry" class="tab-pane mt-6 bg-white rounded-2xl shadow p-4 border hidden">
+      <h2 class="text-xl font-bold mb-2">บันทึกเข้า–ออกห้องสมุด</h2>
+      <form id="form-entry" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div><label class="font-medium">เลขประจำตัวนักเรียน (0001–9999)</label>
+          <input id="entry-studentId" type="text" inputmode="numeric" pattern="\d{4}" class="w-full mt-1 p-2 border rounded-xl" required /></div>
+        <div><label class="font-medium">ชื่อนักเรียน</label>
+          <input id="entry-studentName" type="text" class="w-full mt-1 p-2 border rounded-xl" required /></div>
+        <div class="md:col-span-2">
+          <label class="font-medium">ประเภท</label>
+          <div class="mt-1 flex items-center gap-4">
+            <label class="flex items-center gap-2"><input type="radio" name="entryType" value="เข้า" required> เข้า</label>
+            <label class="flex items-center gap-2"><input type="radio" name="entryType" value="ออก" required> ออก</label>
+          </div>
+        </div>
+        <div class="md:col-span-2 flex gap-2">
+          <button class="px-4 py-2 rounded-xl bg-mint text-white shadow" type="submit">บันทึก</button>
+          <button class="px-4 py-2 rounded-xl bg-gray-100 border" type="reset">ล้างฟอร์ม</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Assistant -->
+    <section id="tab-assistant" class="tab-pane mt-6 bg-white rounded-2xl shadow p-4 border hidden">
+      <h2 class="text-xl font-bold mb-2">ผู้ช่วยบรรณารักษ์ (ป.1–ป.6)</h2>
+      <form id="form-assistant" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div><label class="font-medium">เลขประจำตัวนักเรียน (0001–9999)</label>
+          <input id="as-studentId" type="text" inputmode="numeric" pattern="\d{4}" class="w-full mt-1 p-2 border rounded-xl" required /></div>
+        <div><label class="font-medium">ชื่อนักเรียน</label>
+          <input id="as-studentName" type="text" class="w-full mt-1 p-2 border rounded-xl" required /></div>
+        <div class="md:col-span-2">
+          <label class="font-medium">งานที่ทำวันนี้ (เลือกได้หลายข้อ)</label>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+            <label class="flex items-center gap-2"><input type="checkbox" name="tasks" value="กวาดพื้น"> กวาดพื้น</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="tasks" value="ถูพื้น"> ถูพื้น</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="tasks" value="จัดเก็บหนังสือ"> จัดเก็บหนังสือ</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="tasks" value="เช็ดโต๊ะ"> เช็ดโต๊ะ</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="tasks" value="บริการยืม–คืน"> บริการการยืม–คืนหนังสือ</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="tasks" value="เช็ดชั้นหนังสือ"> เช็ดชั้นหนังสือ</label>
+          </div>
+        </div>
+        <div class="md:col-span-2 flex gap-2">
+          <button class="px-4 py-2 rounded-xl bg-mint text-white shadow" type="submit">บันทึกผู้ช่วย</button>
+          <button class="px-4 py-2 rounded-xl bg-gray-100 border" type="reset">ล้างฟอร์ม</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- QR HOWTO -->
+    <section class="mt-10 bg-white rounded-2xl shadow p-4 border">
+      <h3 class="font-bold text-lg">วิธีสร้างคิวอาร์โค้ดสำหรับหนังสือแต่ละเล่ม</h3>
+      <ol class="list-decimal ml-6 mt-2 space-y-1 text-sm text-gray-700">
+        <li>กำหนด <b>รหัสหนังสือ (คอลัมน์ G ในชีต "รายชื่อหนังสือ")</b> เป็นรหัสไม่ซ้ำ เช่น <code>BK-00001</code></li>
+        <li>ให้คิวอาร์โค้ดเก็บ <b>รหัสหนังสือล้วน ๆ</b> (เช่น BK-00001) หรือจะใส่เป็นลิงก์ก็ได้ เช่น <code>https://your-site.example/?code=BK-00001</code></li>
+        <li>วิธีทำใน Google ชีต: ใช้ Add-on สร้างคิวอาร์โค้ด หรือใช้เว็บสร้างคิวอาร์โค้ดทั่วไป แล้วพิมพ์/แปะลงบนหนังสือ</li>
+        <li>เมื่อสแกนภายในหน้านี้ ระบบจะอ่านค่าและไปดึงข้อมูลจากชีต "รายชื่อหนังสือ" มาเติมอัตโนมัติ</li>
+      </ol>
+    </section>
+
+  </main>
+
+  <script>
+  // ---------------------- CONFIG ----------------------
+  const APP_URL = 'https://script.google.com/macros/s/AKfycbwZzODVABJ4H5e6IcMkljn_djImg3hP6gVF9fNBknM2pFdX9a9w3ZsXezaFp6pFJvr3HA/exec';
+  const SHEET_BOOK_LIST = 'รายชื่อหนังสือ';
+
+  const DEWEY_OPTIONS = [
+    '000 สารานุกรม/คอมพิวเตอร์','100 ปรัชญา','200 ศาสนา','300 สังคมศาสตร์',
+    '400 ภาษา','500 วิทยาศาสตร์','600 วิทยาศาสตร์ประยุกต์','700 ศิลปะ',
+    '800 วรรณคดี','900 ประวัติศาสตร์/ภูมิศาสตร์'
+  ];
+
+  // ---------------------- HELPERS ----------------------
+  const $ = (s)=>document.querySelector(s);
+  const $$ = (s)=>Array.from(document.querySelectorAll(s));
+
+  function fillDeweySelects
